@@ -1,101 +1,102 @@
-import Image from "next/image";
+import Link from 'next/link'
+import { getRumors, getTeams, getTeamByNameEn } from '@/lib/queries'
+import { Sidebar } from '@/components/Sidebar'
+import { RumorFeed } from '@/components/RumorFeed'
 
-export default function Home() {
+// ISR: 60초마다 재생성. Vercel free tier 에서도 충분히 작동.
+export const revalidate = 60
+
+type SearchParams = {
+  team?: string
+  league?: string
+}
+
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: SearchParams
+}) {
+  const teams = await getTeams()
+
+  const teamFilter = searchParams.team
+  const leagueFilter = searchParams.league
+
+  let rumors
+  let heading: { title: string; subtitle: string }
+
+  if (teamFilter) {
+    const team = await getTeamByNameEn(teamFilter)
+    rumors = team ? await getRumors({ teamId: team.id }) : []
+    heading = team
+      ? {
+          title: team.name_ko,
+          subtitle: `${team.league} · ${team.name_en} 관련 루머`,
+        }
+      : { title: '알 수 없는 팀', subtitle: '잘못된 팀 필터입니다.' }
+  } else if (leagueFilter) {
+    rumors = await getRumors({ league: leagueFilter })
+    heading = {
+      title: leagueFilter,
+      subtitle: `${leagueFilter} 전체 팀 루머`,
+    }
+  } else {
+    rumors = await getRumors()
+    heading = {
+      title: '전체 루머',
+      subtitle: '공신력 기자가 보도한 최근 이적 루머',
+    }
+  }
+
+  const filtered = Boolean(teamFilter || leagueFilter)
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
+    <div className="mx-auto flex min-h-screen max-w-7xl">
+      <div className="sticky top-0 hidden h-screen w-72 shrink-0 border-r border-surface-border lg:block">
+        <Sidebar
+          teams={teams}
+          currentTeam={teamFilter ?? null}
+          currentLeague={leagueFilter ?? null}
         />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+      </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+      <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10">
+        <header className="mb-8 flex flex-wrap items-end justify-between gap-3 border-b border-surface-border pb-5">
+          <div>
+            <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-orange-500">
+              {filtered ? 'FILTERED' : 'LATEST'}
+            </p>
+            <h1 className="text-2xl font-extrabold tracking-tight text-gray-50 sm:text-3xl">
+              {heading.title}
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">{heading.subtitle}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-gray-500">최근 50건</p>
+            <p className="text-sm font-bold text-gray-300 tabular-nums">
+              {rumors.length}루머
+            </p>
+          </div>
+        </header>
+
+        <RumorFeed rumors={rumors} filtered={filtered} />
+
+        <footer className="mt-12 flex flex-col items-center gap-2 border-t border-surface-border py-8 text-center text-xs text-gray-600">
+          <p>
+            데이터: Supabase · 캐시: ISR 60s · 호스팅: Vercel
+          </p>
+          <p>
+            기자 공신력은 base_tier + special_tiers 를 프론트엔드에서 계산합니다.
+          </p>
+          <Link
+            href="https://github.com"
             target="_blank"
             rel="noopener noreferrer"
+            className="text-gray-700 transition hover:text-orange-400"
           >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
+            source ↗
+          </Link>
+        </footer>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
-  );
+  )
 }

@@ -23,44 +23,68 @@ function asRumorWithRelations(
 }
 
 export async function getTeams(): Promise<Team[]> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('teams')
-    .select('*')
-    .order('league')
-    .order('name_ko')
-  if (error) {
-    console.error('[queries] getTeams:', error.message)
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('teams')
+      .select('*')
+      .order('league')
+      .order('name_ko')
+    if (error) {
+      console.error('[queries] getTeams:', error.message)
+      return []
+    }
+    return (data ?? []) as Team[]
+  } catch (e) {
+    console.error(
+      '[queries] getTeams unexpected:',
+      e instanceof Error ? e.message : String(e),
+    )
     return []
   }
-  return (data ?? []) as Team[]
 }
 
 export async function getTeamByNameEn(nameEn: string): Promise<Team | null> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('teams')
-    .select('*')
-    .eq('name_en', nameEn)
-    .maybeSingle()
-  if (error) {
-    console.error('[queries] getTeamByNameEn:', error.message)
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('teams')
+      .select('*')
+      .eq('name_en', nameEn)
+      .maybeSingle()
+    if (error) {
+      console.error('[queries] getTeamByNameEn:', error.message)
+      return null
+    }
+    return (data as Team | null) ?? null
+  } catch (e) {
+    console.error(
+      '[queries] getTeamByNameEn unexpected:',
+      e instanceof Error ? e.message : String(e),
+    )
     return null
   }
-  return (data as Team | null) ?? null
 }
 
 export async function getTeamIdsByLeague(league: string): Promise<string[]> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('teams')
-    .select('id')
-    .eq('league', league)
-  if (error) {
-    console.error('[queries] getTeamIdsByLeague:', error.message)
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('teams')
+      .select('id')
+      .eq('league', league)
+    if (error) {
+      console.error('[queries] getTeamIdsByLeague:', error.message)
+      return []
+    }
+    return ((data as Array<{ id: string }> | null) ?? []).map((t) => t.id)
+  } catch (e) {
+    console.error(
+      '[queries] getTeamIdsByLeague unexpected:',
+      e instanceof Error ? e.message : String(e),
+    )
     return []
   }
-  return ((data as Array<{ id: string }> | null) ?? []).map((t) => t.id)
 }
 
 export type RumorFilter =
@@ -71,25 +95,33 @@ export type RumorFilter =
 export async function getRumors(
   filter: RumorFilter = {},
 ): Promise<RumorWithRelations[]> {
-  const supabase = await createClient()
-  let query = supabase
-    .from('rumors')
-    .select('*, team:teams(*), journalist:journalists(*)')
-    .order('created_at', { ascending: false })
-    .limit(50)
+  try {
+    const supabase = await createClient()
+    let query = supabase
+      .from('rumors')
+      .select('*, team:teams(*), journalist:journalists(*)')
+      .order('created_at', { ascending: false })
+      .limit(50)
 
-  if (filter.teamId) {
-    query = query.eq('team_id', filter.teamId)
-  } else if (filter.league) {
-    const teamIds = await getTeamIdsByLeague(filter.league)
-    if (teamIds.length === 0) return []
-    query = query.in('team_id', teamIds)
-  }
+    if (filter.teamId) {
+      query = query.eq('team_id', filter.teamId)
+    } else if (filter.league) {
+      const teamIds = await getTeamIdsByLeague(filter.league)
+      if (teamIds.length === 0) return []
+      query = query.in('team_id', teamIds)
+    }
 
-  const { data, error } = await query
-  if (error) {
-    console.error('[queries] getRumors:', error.message)
+    const { data, error } = await query
+    if (error) {
+      console.error('[queries] getRumors:', error.message)
+      return []
+    }
+    return asRumorWithRelations(data)
+  } catch (e) {
+    console.error(
+      '[queries] getRumors unexpected:',
+      e instanceof Error ? e.message : String(e),
+    )
     return []
   }
-  return asRumorWithRelations(data)
 }

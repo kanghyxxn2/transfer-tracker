@@ -8,6 +8,7 @@ export type Rumor = Database['public']['Tables']['rumors']['Row']
 export type RumorWithRelations = Rumor & {
   team: Team | null
   journalist: Journalist | null
+  from_team: Team | null
 }
 
 /**
@@ -99,7 +100,7 @@ export async function getRumors(
     const supabase = await createClient()
     let query = supabase
       .from('rumors')
-      .select('*, team:teams(*), journalist:journalists(*)')
+      .select('*, team:teams!team_id(*), journalist:journalists(*), from_team:teams!from_team_id(*)')
       .order('created_at', { ascending: false })
       .limit(50)
 
@@ -120,6 +121,41 @@ export async function getRumors(
   } catch (e) {
     console.error(
       '[queries] getRumors unexpected:',
+      e instanceof Error ? e.message : String(e),
+    )
+    return []
+  }
+}
+
+export async function getDoneDeals(
+  filter: RumorFilter = {},
+): Promise<RumorWithRelations[]> {
+  try {
+    const supabase = await createClient()
+    let query = supabase
+      .from('rumors')
+      .select('*, team:teams!team_id(*), journalist:journalists(*), from_team:teams!from_team_id(*)')
+      .eq('is_done_deal', true)
+      .order('created_at', { ascending: false })
+      .limit(100)
+
+    if (filter.teamId) {
+      query = query.eq('team_id', filter.teamId)
+    } else if (filter.league) {
+      const teamIds = await getTeamIdsByLeague(filter.league)
+      if (teamIds.length === 0) return []
+      query = query.in('team_id', teamIds)
+    }
+
+    const { data, error } = await query
+    if (error) {
+      console.error('[queries] getDoneDeals:', error.message)
+      return []
+    }
+    return asRumorWithRelations(data)
+  } catch (e) {
+    console.error(
+      '[queries] getDoneDeals unexpected:',
       e instanceof Error ? e.message : String(e),
     )
     return []

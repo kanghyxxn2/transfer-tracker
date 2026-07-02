@@ -93,6 +93,10 @@ export interface Database {
           korean_summary: string | null
           interest_level: number | null
           source_url: string | null
+          player_name: string | null
+          transfer_fee: string | null
+          from_team_id: string | null
+          is_done_deal: boolean
           created_at: string
         }
         Insert: {
@@ -103,6 +107,10 @@ export interface Database {
           korean_summary?: string | null
           interest_level?: number | null
           source_url?: string | null
+          player_name?: string | null
+          transfer_fee?: string | null
+          from_team_id?: string | null
+          is_done_deal?: boolean
           created_at?: string
         }
         Update: {
@@ -113,6 +121,10 @@ export interface Database {
           korean_summary?: string | null
           interest_level?: number | null
           source_url?: string | null
+          player_name?: string | null
+          transfer_fee?: string | null
+          from_team_id?: string | null
+          is_done_deal?: boolean
           created_at?: string
         }
       }

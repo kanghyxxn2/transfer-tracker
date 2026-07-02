@@ -100,7 +100,7 @@ export async function getRumors(
     const supabase = await createClient()
     let query = supabase
       .from('rumors')
-      .select('*, team:teams!team_id(*), journalist:journalists(*), from_team:teams!from_team_id(*)')
+      .select('*, team:teams(*), journalist:journalists(*)')
       .order('created_at', { ascending: false })
       .limit(50)
 
